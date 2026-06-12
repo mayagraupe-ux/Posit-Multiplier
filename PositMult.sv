@@ -44,8 +44,8 @@ module mult( a,  b, inf, zero, ans
    wire		  rc1, rc2;
    
    
-   extraction ext1 (.in(a), .rc(rc1), .regime(r1), .exp(e1), .mant(m1));
-   extraction ext2 (.in(b), .rc(rc2), .regime(r2), .exp(e2), .mant(m2));
+   extraction ext1 (.in(x1), .rc(rc1), .regime(r1), .exp(e1), .mant(m1));
+   extraction ext2 (.in(x2), .rc(rc2), .regime(r2), .exp(e2), .mant(m2));
    
    
     
@@ -91,12 +91,12 @@ assign rem_shift = rem >> Rout;
   wire L=rem_shift[N+4], G = rem_shift[N+3], R = rem_shift[N+2], S=|rem_shift[N+1:0];	 
 wire ulp_add;    
    assign ulp_add =(Rout < N-es -2) ? (( G & (R +S) ) | (L & G & (!( R | S )))) : 0;
-wire [2 * N-1 +3] rem_rounded;
+wire [2 * N-1 +3: 0] rem_rounded;
 wire [2 *N-1 +3: 0] temp;
 assign temp = '0;
 assign temp[0] = ulp_add;
    assign  rem_rounded = (rem_shift + temp);
-wire [2 * N-1+3] rem_signed;
+wire [2 * N-1+3 : 0] rem_signed;
    assign rem_signed = (mult_sign == 0) ? rem_rounded : -rem_rounded;
 			    
 
@@ -135,7 +135,7 @@ module extraction (in, rc, regime, exp, mant
    
    
    //find k with leading one detector 
-   LOD #(.N(N-1), .bs(bs))  lod (.count(regime), .xin(xin));
+   LOD #(.N(N-1), .bs(bs))  lod (.count(regime), .xin(rc_xin));
 
 
    
