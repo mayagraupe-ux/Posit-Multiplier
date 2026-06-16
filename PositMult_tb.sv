@@ -1,3 +1,36 @@
 module PositMult_tb;
 
+//set parameters
+parameter N =8;
+parameter bs = $clog2 (N);
+parameter es = 2;
+
+reg [N-1 : 0] in1, in2;
+wire [N-1: 0] out;
+wire inf;
+wire zero;
+
+
+//uut
+
+mult #(.N(N), .es(es)) uut (.a(in1), .b(in2), .inf(inf), .zero(zero), .ans(out));
+
+initial begin
+
+$display("Time\t In1\t In2\t Out\t Zero\t Inf");
+$monitor ("%0d\t %b\t %b\t %b\t %b\t %b", $time, in1, in2, out, zero, inf);
+
+//avg case (64 * 28)
+in1 = 8'b01101000;
+in2 = 8'b01100011;
+#20;
+
+$finish;
+
+end
+
+
+
+
+
 endmodule

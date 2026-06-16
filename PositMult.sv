@@ -55,13 +55,29 @@ module mult( a,  b, inf, zero, ans
    //xor the signs
    wire mult_sign = s1^ s2;
    
+localparam MW = N - es -1; //max mantissa width
+
+//extract only useful mantissa bits
+wire [MW -1: 0] true_m1 = m1[N-1 : N-MW];
+wire [MW - 1:0] true_m2 = m2[N-1 : N- MW];
+
+//mulitply mantissas
+wire [(2*MW)-1 : 0] mult_mant = true_m1 * true_m2;
+
+//check for over flow
+wire mantOver = mult_mant[(2*MW) -1];
+
+//if no overflow, shift everything left by 1 ( we want a leading 1)
+wire[(2*MW) -1 : 0] mult_mant_fixed = mantOver ? mult_mant : (mult_mant << 1);
+
+/*
    //multiply mantissa
    wire 	[2*(N-es) +1:0] mult_mant = m1 * m2;
    wire			mantOver = mult_mant[2*(N-es)+1];
    //if there is overflow, we need to shift everything over
    wire		[2 * (N-es) +1: 0]	mult_mant_fixed  = mantOver ? mult_mant : mult_mant << 1;
    
-   
+   */
 
    //add expoinents
 
@@ -79,11 +95,17 @@ module mult( a,  b, inf, zero, ans
    
 
 //posit construction
-   localparam		MW = N-es -2;
+  // localparam		MW = N-es -2;
    //find regime sequence, then exponent, then mantissa, then guard, round and sticky bits
 wire [2 * N-1 +3: 0] rem;
-   assign rem = {{N{!eff_exp[es+rs+1]}}, eff_exp[es+rs+1], Eout, 
- mult_mant_fixed[2*MW -1: MW], mult_mant_fixed[MW-1: MW-2], |(mult_mant_fixed[MW-3:0])};
+   assign rem = {{N{!eff_exp[es+rs+1]}},
+ eff_exp[es+rs+1],
+ Eout, 
+ mult_mant_fixed[(2*MW) -2: MW-1], //main fraction bits
+ mult_mant_fixed[MW-2], //guard bit
+|(mult_mant_fixed[MW-3:0])}; //sticky bit
+
+
 wire [2 * N-1 +3: 0] rem_shift;
 assign rem_shift = rem >> Rout;			     
    //rounding - round to nearest even
@@ -151,7 +173,8 @@ module extraction (in, rc, regime, exp, mant
    assign exp = shifted[N-2: N-2-es+1];
    
 //get fraction values  which are remaining bits  
-   assign mant = shifted << es ;
+wire [N-1: 0] fraction = shifted << es;
+   assign mant = {1'b1, fraction[N-2 :0]};
 
 endmodule // extraction
 
@@ -164,18 +187,19 @@ endmodule // extraction
  parameter  bs = $clog2(N);
    
    input [N-1 : 0] xin;
-   output logic [bs-1:0] count;
+   output reg [bs-1:0] count;
  // output	  valid;
 
    integer	  i;
+reg found; //to break out of loop
 
   always @(*) begin
      count =0; //default if it never finds one
-    
+    found =0;
      for(i = N-1; i>=0; i=i-1) begin
-	if(xin[i]) begin
+	if(xin[i] && !found) begin
 	   count =i;
-	   break;
+	   found =1;
 	   
 	end
 	
