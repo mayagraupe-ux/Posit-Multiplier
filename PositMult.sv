@@ -82,27 +82,33 @@ wire[(2*MW) -1 : 0] mult_mant_fixed = mantOver ? mult_mant : (mult_mant << 1);
    //add expoinents
 
 
-   wire		[rs-1:0]	RG1 = rc1 ? r1 -  1: -r1;
-   wire		[rs-1:0]	RG2 = rc2 ? r2 - 1 : -r2;
-wire signed [rs+es:0] scale1 = ($signed(RG1) <<< es) + $unsigned(e1);
-wire signed [rs+es:0] scale2 = ($signed(RG2) <<< es) + $unsigned(e2);
+   wire		[rs:0]	RG1 = rc1 ? r1 -  1: -r1;
+   wire		[rs:0]	RG2 = rc2 ? r2 - 1 : -r2;
+wire signed [rs+es:0] scale1 = ($signed(RG1) <<< es) + $signed({1'b0 , e1});
+wire signed [rs+es:0] scale2 = ($signed(RG2) <<< es) + $signed({1'b0, e2});
 
 // sum them up with mantissa overflow
-wire signed [rs+es+1:0] total_scale = scale1 + scale2 + mantOver;
+wire signed [rs+es+1:0] total_scale = $signed(scale1) + $signed(scale2) + $signed({1'b0, mantOver});
 
 // sparate into Rout and Eout based on sign
 wire total_sign = total_scale[rs+es+1];
 
+
+//for Eout, we just want the remainder
+ wire [es-1 :0] Eout = total_scale[es-1:0];
+wire signed [rs:0] signed_Rout = (total_scale - $signed({1'b0, Eout})) >>> es;
+wire [rs: 0] Rout = total_sign ? -signed_Rout : signed_Rout;
+
 // Absolute value of total scale for easier decoding
-wire [rs+es+1:0] abs_scale = total_sign ? -total_scale : total_scale;
+//wire [rs+es+1:0] abs_scale = total_sign ? -total_scale : total_scale;
 
-wire has_remainder = |abs_scale[es-1:0]; // Checks if any exponent bits are 1
+//wire has_remainder = |abs_scale[es-1:0]; // Checks if any exponent bits are 1
 
-assign Eout = total_sign ? (has_remainder ? -abs_scale[es-1:0] : {es{1'b0}}) 
-                         : abs_scale[es-1:0];
+//assign Eout = total_sign ? (has_remainder ? -abs_scale[es-1:0] : {es{1'b0}}) 
+//                         : abs_scale[es-1:0];
 
-assign Rout = total_sign ? (abs_scale[rs+es:es] + (has_remainder ? 1 : 0)) 
-                         : abs_scale[rs+es:es];
+//assign Rout = total_sign ? (abs_scale[rs+es:es] + (has_remainder ? 1 : 0)) 
+     //                    : abs_scale[rs+es:es];
 
 
 /*
@@ -120,17 +126,20 @@ assign Rout = total_sign ? (abs_scale[rs+es:es] + (has_remainder ? 1 : 0))
 //posit construction
   // localparam		MW = N-es -2;
    //find regime sequence, then exponent, then mantissa, then guard, round and sticky bits
-wire [2 * N-1 +3: 0] rem;
-   assign rem = {{N{!abs_scale[es+rs+1]}},
- abs_scale[es+rs+1],
+wire regime_bit = total_sign ? 1'b0 : 1'b1;
+wire term_bit = total_sign ? 1'b1 : 1'b0;
+
+wire signed [2 * N-1 + 3: 0] rem;
+   assign rem = {{N{regime_bit}},
+ term_bit,
  Eout, 
  mult_mant_fixed[(2*MW) -2: MW-1], //main fraction bits
- mult_mant_fixed[MW-2], //guard bit
-|(mult_mant_fixed[MW-3:0])}; //sticky bit
+ mult_mant_fixed[MW-1], //guard bit
+|(mult_mant_fixed[MW-2:0])}; //sticky bit
 
 
-wire [2 * N-1 +3: 0] rem_shift;
-assign rem_shift = rem >> Rout;		
+wire signed [2 * N + es + MW: 0] rem_shift;
+assign rem_shift = rem >> (N- Rout - 2);		
 
      
    //rounding - round to nearest even
@@ -139,9 +148,7 @@ assign rem_shift = rem >> Rout;
 wire ulp_add;    
    assign ulp_add =(Rout < N-es -2) ? (( G & (R +S) ) | (L & G & (!( R | S )))) : 0;
 wire [2 * N-1 +3: 0] rem_rounded;
-wire [2 *N-1 +3: 0] temp;
-assign temp = '0;
-assign temp[0] = ulp_add;
+wire [2 *N-1 +3: 0] temp = {{(2*N+3){1'b0}}, ulp_add};
    assign  rem_rounded = (rem_shift + temp);
 wire [2 * N-1+3 : 0] rem_signed;
    
@@ -166,7 +173,7 @@ always @(*) begin
       $display("Extracted x1: rc=%b, regime=%d, exp=%b, mant=%b", rc1, r1, e1, m1);
       $display("Extracted x2: rc=%b, regime=%d, exp=%b, mant=%b", rc2, r2, e2, m2);
       $display("Mantissa Mul: mult_mant = %b, mantOver = %b", mult_mant, mantOver);
-      $display("Exponent Add: total_scale  = %d, Rout = %d, Eout = %b", total_scale, Rout, Eout);
+      $display("Exponent Add: total_scale  = %d, Rout = %d, Eout = %d", total_scale, Rout, Eout);
       $display("Posit Build:  rem = %b", rem);
       $display("Posit Shift:  rem_shift = %b", rem_shift);
       $display("Posit Round:  rem_rounded = %b", rem_rounded);
