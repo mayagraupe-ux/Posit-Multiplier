@@ -23,9 +23,9 @@ module mult( a,  b, inf, zero, ans
    
    //check for zeros (all zeros)
    
-   wire		  temp_zero1 = | a[N-1:0];
-   wire		  temp_zero2 = | b[N-1:0];
-   assign zero = temp_zero1 & temp_zero2; // one if the value is nonzero, zero  if it is 0 - if either input is 0, it will become 0 and the multiplication is 0
+   wire		  temp_zero1 = ~(| a[N-1:0]);
+   wire		  temp_zero2 = ~( | b[N-1:0]);
+   assign zero = temp_zero1 | temp_zero2; 
    
    //check for infinity (sign is 1, rest are 0)
    
@@ -81,8 +81,31 @@ wire[(2*MW) -1 : 0] mult_mant_fixed = mantOver ? mult_mant : (mult_mant << 1);
 
    //add expoinents
 
+
    wire		[rs-1:0]	RG1 = rc1 ? r1 -  1: -r1;
    wire		[rs-1:0]	RG2 = rc2 ? r2 - 1 : -r2;
+wire signed [rs+es:0] scale1 = ($signed(RG1) <<< es) + $unsigned(e1);
+wire signed [rs+es:0] scale2 = ($signed(RG2) <<< es) + $unsigned(e2);
+
+// sum them up with mantissa overflow
+wire signed [rs+es+1:0] total_scale = scale1 + scale2 + mantOver;
+
+// sparate into Rout and Eout based on sign
+wire total_sign = total_scale[rs+es+1];
+
+// Absolute value of total scale for easier decoding
+wire [rs+es+1:0] abs_scale = total_sign ? -total_scale : total_scale;
+
+wire has_remainder = |abs_scale[es-1:0]; // Checks if any exponent bits are 1
+
+assign Eout = total_sign ? (has_remainder ? -abs_scale[es-1:0] : {es{1'b0}}) 
+                         : abs_scale[es-1:0];
+
+assign Rout = total_sign ? (abs_scale[rs+es:es] + (has_remainder ? 1 : 0)) 
+                         : abs_scale[rs+es:es];
+
+
+/*
    //concatenate together the regime (RG) and E (2^2^es)^k *2^e (and account for if there is overflow)
    wire		[es + rs +1: 0]	eff_exp  = {RG1, e1} + {RG2, e2} +mantOver;
    //take abs value of it
@@ -92,14 +115,14 @@ wire[(2*MW) -1 : 0] mult_mant_fixed = mantOver ? mult_mant : (mult_mant << 1);
  //to find regime out, if pos add 1, if neg with  a remainder also add 1, if neg with no remainder don't add 1
    wire [rs:0]	Rout	= !(eff_exp[es+rs+1]) | (eff_exp[es+rs+1] & eff_exp_neg[es-1:0]) ? eff_exp_neg[es+rs:es] +1 : eff_exp_neg[es+rs:es];
    
-   
+   */
 
 //posit construction
   // localparam		MW = N-es -2;
    //find regime sequence, then exponent, then mantissa, then guard, round and sticky bits
 wire [2 * N-1 +3: 0] rem;
-   assign rem = {{N{!eff_exp[es+rs+1]}},
- eff_exp[es+rs+1],
+   assign rem = {{N{!abs_scale[es+rs+1]}},
+ abs_scale[es+rs+1],
  Eout, 
  mult_mant_fixed[(2*MW) -2: MW-1], //main fraction bits
  mult_mant_fixed[MW-2], //guard bit
@@ -107,7 +130,9 @@ wire [2 * N-1 +3: 0] rem;
 
 
 wire [2 * N-1 +3: 0] rem_shift;
-assign rem_shift = rem >> Rout;			     
+assign rem_shift = rem >> Rout;		
+
+     
    //rounding - round to nearest even
    //ulp_add = G.(R+S) + L.G.(!(R+S))
   wire L=rem_shift[N+4], G = rem_shift[N+3], R = rem_shift[N+2], S=|rem_shift[N+1:0];	 
@@ -119,12 +144,35 @@ assign temp = '0;
 assign temp[0] = ulp_add;
    assign  rem_rounded = (rem_shift + temp);
 wire [2 * N-1+3 : 0] rem_signed;
-   assign rem_signed = (mult_sign == 0) ? rem_rounded : -rem_rounded;
-			    
+   
+//assign rem_signed = (mult_sign == 0) ? rem_rounded : -rem_rounded;
+	wire [N-1: 0] pos_posit;
+assign pos_posit = rem_rounded[2*N+1: N+2];
+//if should be negative, take 2's comp
+assign ans = (zero == 1) ? {N{1'b0}}:
+	     (inf) ? {1'b1, {N-1{1'b0}}} :
+	     (mult_sign) ? -pos_posit:
+				pos_posit;		    
 
    //final processing
-   assign ans = (zero | inf ) ? {inf, {(N-1){1'b0}}} : {mult_sign, rem_signed};
+  // assign ans = (!zero | inf ) ? {inf, {(N-1){1'b0}}} : {mult_sign, rem_signed};
    
+always @(*) begin
+      // Small delay ensures all combinational logic has settled before printing
+      #1; 
+      $display("--- TIME: %0t ---", $time);
+      $display("Inputs:  a = %b, b = %b", a, b);
+      $display("Flags:   zero = %b, inf = %b, mult_sign = %b", zero, inf, mult_sign);
+      $display("Extracted x1: rc=%b, regime=%d, exp=%b, mant=%b", rc1, r1, e1, m1);
+      $display("Extracted x2: rc=%b, regime=%d, exp=%b, mant=%b", rc2, r2, e2, m2);
+      $display("Mantissa Mul: mult_mant = %b, mantOver = %b", mult_mant, mantOver);
+      $display("Exponent Add: total_scale  = %d, Rout = %d, Eout = %b", total_scale, Rout, Eout);
+      $display("Posit Build:  rem = %b", rem);
+      $display("Posit Shift:  rem_shift = %b", rem_shift);
+      $display("Posit Round:  rem_rounded = %b", rem_rounded);
+      $display("Final Output: ans = %b", ans);
+      $display("---------------------");
+   end
    
 endmodule // mult
 
@@ -149,7 +197,7 @@ module extraction (in, rc, regime, exp, mant
 
    assign rc = xin[N-2];
    //if rc is 1, we need to flip it all to 0 to get leading one detector
-   wire rc_xin = rc ? ~xin : xin;
+   wire [N -1: 0] rc_xin = rc ? ~xin : xin;
 
    wire [bs -1: 0] regime; //k value
    wire		   k_temp;
@@ -157,7 +205,7 @@ module extraction (in, rc, regime, exp, mant
    
    
    //find k with leading one detector 
-   LOD #(.N(N-1), .bs(bs))  lod (.count(regime), .xin(rc_xin));
+   LOD #(.N(N), .bs(bs))  lod (.count(regime), .xin(rc_xin[N-2:0]));
 
 
    
@@ -166,7 +214,7 @@ module extraction (in, rc, regime, exp, mant
 //shift xin over to get rid of the regime  by regime+1 but make sure we don't overshift
    wire[bs:0] total_shift = (regime == N-1) ? (N-1) : (regime +1);
    
-   wire [N-2:0]	shifted = rc_xin << total_shift;
+   wire [N-2:0]	shifted = xin << total_shift;
    
 
 //get exp values and then flush out exp bits
@@ -186,20 +234,20 @@ endmodule // extraction
  parameter  N= 8;
  parameter  bs = $clog2(N);
    
-   input [N-1 : 0] xin;
-   output reg [bs-1:0] count;
+   input [N-2 : 0] xin;
+   output reg [bs:0] count;
  // output	  valid;
 
    integer	  i;
-reg found; //to break out of loop
+
 
   always @(*) begin
-     count =0; //default if it never finds one
-    found =0;
-     for(i = N-1; i>=0; i=i-1) begin
-	if(xin[i] && !found) begin
-	   count =i;
-	   found =1;
+     count =N; //default if it never finds one
+ 
+     for(i = 0; i<N-1; i=i+1) begin
+	if(xin[i] ) begin
+	   count =(N-2) -i ;
+	  
 	   
 	end
 	

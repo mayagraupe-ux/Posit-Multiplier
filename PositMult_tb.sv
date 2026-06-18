@@ -17,15 +17,17 @@ mult #(.N(N), .es(es)) uut (.a(in1), .b(in2), .inf(inf), .zero(zero), .ans(out))
 
 initial begin
 
-$display("Time\t In1\t In2\t Out\t Zero\t Inf");
+$display("Time\t In1\t   In2\t     Out\t      Zero\t Inf");
 $monitor ("%0d\t %b\t %b\t %b\t %b\t %b", $time, in1, in2, out, zero, inf);
 
 //avg case (64 * 28)
 in1 = 8'b01101000;
 in2 = 8'b01100011;
+//correct answer should be 0 1110 11 0
 #20;
 
-$finish;
+
+$stop;
 
 end
 
