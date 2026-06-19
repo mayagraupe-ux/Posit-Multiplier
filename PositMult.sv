@@ -263,3 +263,117 @@ endmodule // extraction
 
   endmodule // LOD
 	    
+
+
+module LOD_fsm (
+input reg     clk,
+input wire  in,
+input reg     reset,
+output reg     done,
+output reg [3: 0] count);
+
+parameter N =8;
+parameter bs = $clog2(N);
+
+//encode states
+localparam STATE_START = 2'b00;
+localparam STATE_COUNT= 2'b01;
+localparam STATE_END = 2'b10;
+
+//state registers
+reg[1:0] current_state;
+reg[1:0] next_state;
+
+   reg	 count_clear;
+   reg	 count_enable;
+   
+   
+//state transition
+always @(posedge clk) begin
+
+	if(reset) begin
+	   current_state = STATE_START;
+	   
+	end else begin
+   current_state =next_state;
+	end
+end
+
+   //logic
+
+   always @(*) begin
+      //defaults
+      next_state = current_state;
+      count_clear  = 1'b0;
+      count_enable = 1'b0;
+      done = 1'b0;
+
+      
+
+      case (current_state)
+	STATE_COUNT: begin
+	  
+	   if(in == 1 ) begin
+	      //found a 1, stop counting
+	      next_state = STATE_END;
+	      count_enable = 0;
+	      
+	      
+	      
+	   end else begin
+	      //found a 0, keep counting
+	      count_enable = 1; 
+	      next_state = STATE_COUNT;
+	      
+	      end
+	   
+	   
+	end // case: STATE_COUNT
+
+	STATE_END: begin
+	   //don't move no matter the input
+	   done = 1'b1;
+	  // count_clear = 1'b1;
+	   count_enable = 0;
+	next_state = STATE_END;
+
+	   
+	end
+STATE_START: begin
+//if 0, move to count, else move to end
+if(in ==0 ) begin
+next_state = STATE_COUNT;
+count_enable = 1;
+
+end else begin
+next_state = STATE_END;
+count_enable = 0;
+
+
+end
+end
+
+	default: begin
+	   next_state = STATE_START;
+	//   count_clear = 1;
+count_enable = 0;
+	end
+   endcase
+	
+     
+end
+	//count logic
+
+      always @(posedge clk) begin
+if(reset || count_clear) begin
+   
+  count =0;
+   
+end else if (count_enable) begin
+   count = count +1;
+   
+end
+
+      end
+  
+endmodule

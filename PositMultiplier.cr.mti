@@ -1,0 +1,19 @@
+C:/Users/mayag/OneDrive/Documents/GitHub/Posit-Multiplier/PositMult_tb.sv {1 {vlog -work work -sv -stats=none C:/Users/mayag/OneDrive/Documents/GitHub/Posit-Multiplier/PositMult_tb.sv
+Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+-- Compiling module PositMult_tb
+
+Top level modules:
+	PositMult_tb
+
+} {} {}} C:/Users/mayag/OneDrive/Documents/GitHub/Posit-Multiplier/PositMult.sv {1 {vlog -work work -sv -stats=none C:/Users/mayag/OneDrive/Documents/GitHub/Posit-Multiplier/PositMult.sv
+Model Technology ModelSim - Intel FPGA Edition vlog 2020.1 Compiler 2020.02 Feb 28 2020
+-- Compiling module mult
+-- Compiling module extraction
+-- Compiling module LOD
+-- Compiling module LOD_fsm
+
+Top level modules:
+	mult
+	LOD_fsm
+
+} {} {}}
