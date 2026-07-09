@@ -27,6 +27,7 @@ reset = 1;
 #10;
 reset = 0;
 
+/*
 //scenario 1 : 0001. wait clock cycle between each
 in = 1'b0;
 
@@ -48,6 +49,15 @@ in = 1'b1;
 in = 1'b0;
 #10;
 in = 1'b1; 
+#10;
+
+*/
+//scenario 2: immediate 1
+in = 1'b1;
+#10;
+
+in = 1'b0;
+
 #10;
 
  $display(" Final zero count tracked: %d", count);
