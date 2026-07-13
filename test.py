@@ -1,6 +1,7 @@
 import mul
 
 
+
 def test(name, func, tests):
     print("-" * 10)
     print("Running {} tests for \033[;;1m{}()".format(len(tests), name))
@@ -59,6 +60,20 @@ test_method("Posit.extract", make_posit_from_bit_pattern, "extract", [
     ((8, "0000000"), None),
     ((8, "1000000"), None)
 ])
+
+ex_1 = make_posit_from_bit_pattern(2, "00000000")
+ex_2 = make_posit_from_bit_pattern(2, "00000000")
+ex_3 = make_posit_from_bit_pattern(2, "00000000")
+posit_builder_tests = [
+    ((0, 0, 0), ex_1),
+    ((1, -1, 2), ex_2),
+    ((0, 4, 1), ex_3),
+]
+
+builder = mul.Posit(8, 2)
+
+test("construct", builder.construct, posit_builder_tests)
+
 
 
 

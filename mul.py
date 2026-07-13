@@ -132,7 +132,10 @@ class Posit():
 
 
 
-    
+    def __eq__(self, other):
+        if type(other) != Posit:
+            other = Posit(other, N = self.N, es = self.es)
+        return self.value == other.value
 
 
 
@@ -143,6 +146,8 @@ class Posit():
         #need to floor divide scale by 2^es to get regime, and mod by 2^es to get exponent
         regime = scale // (2 ** self.es)
         exponent = scale % (2 ** self.es)
+
+        n = 0
 
         #num of bits needed for regime - if pos, need +2 to account for terminating
         #if neg, need +1 to account for terminating and make it neg
@@ -183,7 +188,7 @@ class Posit():
         #subtract 1 from fraction to account for implicit leading 1
         fraction_length = countBits(fraction) -1
         #remove hidden bit
-        fraction &= 2**(countBits(fraction)-1) - 1
+        fraction &= int(2**(countBits(fraction)-1) - 1)
 
         #check how many bits left open
         trailing_bits = self.N - 1 - regime_length
@@ -277,3 +282,4 @@ def countTrailingZeros(x):
  
 def twosComp(n, bits):
     n = ((1<< bits) -n) % (1 << bits)
+    return n
