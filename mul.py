@@ -1,4 +1,5 @@
 import math
+from decimal import getcontext, Decimal
 
 
 
@@ -87,16 +88,23 @@ class Posit():
 
     def extract(self):
         #returns sign, regime, exponent, fraction
-        x = self.value
+       
 
         #check excpetion values
-        if(x == 0):
+        if(self.value == 0):
             return None
-        if(x == self.inf):
+        if(self.value == self.inf):
             return None
         
         #get sign by checking msb
-        sign = checkBit(x, self.N - 1)
+        sign = checkBit(self.value, self.N - 1)
+
+        #if negative, must twos comp
+        if(sign == 1):
+            x = twosComp(self.value, self.N)
+        else:
+            x = self.value
+        
 
         #get regime by counting leading bits
         regime_count = 0
@@ -136,6 +144,42 @@ class Posit():
         if type(other) != Posit:
             other = Posit(other, N = self.N, es = self.es)
         return self.value == other.value
+
+
+    def get_value(self):
+        #set precisiojn to 50 digits
+        getcontext().prec = 100
+
+        if self.value == 0:
+            return Decimal("0")
+        elif self.value == self.inf:
+            return Decimal("inf")
+        
+        sign, regime, exponent, fraction = self.extract()
+  
+
+       
+        n = countBits(fraction) - 1
+        f = Decimal(fraction)
+
+        
+       
+        
+        #return ((1 - (3 * sign)) + f ) * (Decimal(2) **Decimal((1 - (2 * sign)) * (2**(self.es) * regime + exponent + sign)) )
+        return ((-1)**sign * Decimal(2)**Decimal(2**self.es * regime + exponent -n) * Decimal(f))
+    
+
+    def print_components(self):
+        
+        sign, regime, exponent, fraction = self.extract()
+        
+        print("--- Posit Bit Breakdown ---")
+        print(f"Sign:     {sign}")
+        print(f"Regime:   {regime}")
+        print(f"Exponent: {exponent}")
+        # Assuming fraction might be a float or integer, format accordingly
+        print(f"Fraction: {fraction}")
+
 
 
 
@@ -232,6 +276,7 @@ class Posit():
         else:
             p.set_bit_pattern(twosComp(n, self.N))
 
+        
         return p
 
 

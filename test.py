@@ -1,4 +1,6 @@
 import mul
+from decimal import getcontext, Decimal
+import math
 
 
 
@@ -26,8 +28,22 @@ def test_method(name, generator, method, tests):
     passed = 0
     failed = []
     for i in range(len(tests)):
-        if getattr(generator(*(tests[i][0])), method)() == tests[i][1]:
-            passed += 1
+        actual = getattr(generator(*(tests[i][0])), method)()
+        expected = tests[i][1]
+
+        is_match = False
+        if actual is None or expected is None:
+            is_match = (actual == expected)
+        else:
+            try:
+                #check if they are close
+                is_match= math.isclose(float(actual), float(expected), rel_tol =1e-7)
+            except (ValueError, TypeError):
+                #if can't convert to floats ahhh, then use normal equality
+                is_match = (actual == expected)
+        
+        if is_match: 
+            passed+=1
         else:
             failed.append(i)
 
@@ -61,6 +77,8 @@ test_method("Posit.extract", make_posit_from_bit_pattern, "extract", [
     ((8, "1000000"), None)
 ])
 
+
+
 ex_1 = make_posit_from_bit_pattern(2, "00000000")
 ex_2 = make_posit_from_bit_pattern(2, "00000000")
 ex_3 = make_posit_from_bit_pattern(2, "00000000")
@@ -71,6 +89,18 @@ posit_builder_tests = [
 ]
 
 builder = mul.Posit(8, 2)
+
+
+
+test_method("Posit.get_value", make_posit_from_bit_pattern, "get_value", [
+    ((2, "01101000"), (64)),
+    ((2, "01110111"), (3072)), 
+    ((2, "00001101"), (0.0014648438)),
+    ((2, "10101010"), (-7)),
+    ((2, "11110010"), (-0.001953125)),
+    ((2, "0000000"), (0)),
+    ((2, "1000000"), (Decimal("inf")))
+])
 
 test("construct", builder.construct, posit_builder_tests)
 
