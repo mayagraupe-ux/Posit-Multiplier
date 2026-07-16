@@ -85,19 +85,20 @@ class Posit():
         return self.construct(sign_product, scale_product, fraction_product)
 
 
-
+    #fraction returns with implicit hidden bit (i.e if fraction is 001, will return as 1001 = 9)
+    #regime returns the k value (#leading ones -1 or -#of leading 0s)
     def extract(self):
         #returns sign, regime, exponent, fraction
        
 
         #check excpetion values
         if(self.value == 0):
-            return None
+            return (0, 0, 0, 0)
         if(self.value == self.inf):
-            return None
+            return (1, 0, 0, 0)
         
         #get sign by checking msb
-        sign = checkBit(self.value, self.N - 1)
+        sign = self.get_sign()
 
         #if negative, must twos comp
         if(sign == 1):
@@ -113,7 +114,7 @@ class Posit():
         regime_sign = checkBit(x, self.N -2 )
         #if sign is 1, count leading 1s and subtract 1, else count leading 0s and make neg
         if(regime_sign == 1):
-            while(checkBit(x, self.N - 2 - regime_count) == 1 and regime_count < self.N - 1):
+            while(regime_count < self.N - 1 and checkBit(x, self.N - 2 - regime_count) == 1):
                 regime_count += 1
             regime_count -= 1
         else:
@@ -156,34 +157,97 @@ class Posit():
             return Decimal("inf")
         
         sign, regime, exponent, fraction = self.extract()
-  
 
        
         n = countBits(fraction) - 1
         f = Decimal(fraction)
-
-        
-       
         
         #return ((1 - (3 * sign)) + f ) * (Decimal(2) **Decimal((1 - (2 * sign)) * (2**(self.es) * regime + exponent + sign)) )
         return ((-1)**sign * Decimal(2)**Decimal(2**self.es * regime + exponent -n) * Decimal(f))
     
+    def print_value(self):
+        #set precisiojn to 50 digits
+        getcontext().prec = 100
+
+        if self.value == 0:
+            return Decimal("0")
+        elif self.value == self.inf:
+            return Decimal("inf")
+        
+        sign, regime, exponent, fraction = self.extract()
+
+       
+        n = countBits(fraction) - 1
+        f = Decimal(fraction)
+        
+        #return ((1 - (3 * sign)) + f ) * (Decimal(2) **Decimal((1 - (2 * sign)) * (2**(self.es) * regime + exponent + sign)) )
+        print ((-1)**sign * Decimal(2)**Decimal(2**self.es * regime + exponent -n) * Decimal(f))
+
+    def print_bits(self):
+        if(self.value == 0):
+            print("0" * 8)
+        elif (self.value == self.inf):
+            print("1" + ("0" * 7))
+        else:
+        #print integer value padded with 0s
+            print(f"{self.value:0{self.N}b}")
+        #im so stupid bruh
+    
+    def get_bits(self):
+         if(self.value == 0):
+            return("0" * 8)
+         elif (self.value == self.inf):
+            return("1" + ("0" * 7))
+         else:
+        #print integer value padded with 0s
+            return(f"{self.value:0{self.N}b}")
+
+
+
+    def __str__(self):
+        return self.get_value().__str__()
+    
+    def __repr__(self):
+        return self.str()
 
     def print_components(self):
         
         sign, regime, exponent, fraction = self.extract()
+        r_str = self.get_regime_string()
+        e_str = self.get_exp_string()
         
         print("--- Posit Bit Breakdown ---")
-        print(f"Sign:     {sign}")
-        print(f"Regime:   {regime}")
-        print(f"Exponent: {exponent}")
+        print(f"Sign:     {sign} : {sign:b}")
+        print(f"Regime:   {regime} : {r_str}")
+        print(f"Exponent: {exponent} : {e_str}")
         # Assuming fraction might be a float or integer, format accordingly
-        print(f"Fraction: {fraction}")
+        bin_frac = f"{fraction:b}"
+        no_implicit = bin_frac[1:]
+        print(f"Fraction: {fraction} : {no_implicit}")
 
 
 
+    def get_regime_string(self):
+        sign, regime, exp, frac = self.extract()
+        r_str = ""
+        if(regime>=0):
+            while(regime > 0):
+                r_str += "1"
+                regime-= 1
+            r_str += "1"
+            r_str += "0"
+        else:
+            while(regime< 0):
+                r_str += "0"
+                regime += 1
+            r_str += "1"
+        return r_str
 
-
+    def get_exp_string(self):
+        sign, regime, exp, frac = self.extract()
+        e_str = str(f"{exp:b}")
+        #may have to pad with 0s
+        return e_str.rjust(self.es, "0")
 
     def construct(self, sign, scale, fraction):
         
@@ -278,6 +342,10 @@ class Posit():
 
         
         return p
+    
+    def get_sign(self):
+        return checkBit(self.value, self.N - 1)
+
 
 
    
@@ -324,7 +392,8 @@ def countTrailingZeros(x):
        return 0
    return (x & -x).bit_length() - 1
 
- 
+ #n is the integer number to convert
+ #bits is the bit width
 def twosComp(n, bits):
     n = ((1<< bits) -n) % (1 << bits)
     return n

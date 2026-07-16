@@ -19,7 +19,22 @@ def test(name, func, tests):
     print("\033[1;32m{}\033[0;37m out of {} tests passed".format(passed, len(tests)))
 
     for i in failed:
-        print("\033[1;31mTest {} failed: \033[0;37mInput: {}. Expected: {}. Actual: {}.".format(i, tests[i][0], func(*tests[i][0]), tests[i][1]))
+        actual_val = func(*tests[i][0])
+        expected_val = tests[i][1]
+        
+        # Convert the actual and expected values to bitstrings
+        actual_bits = get_bits(actual_val, 8)
+        expected_bits = get_bits(expected_val, 8)
+        
+        print("\033[1;31mTest {} failed: \033[0;37mInput: {}. Actual: {} ({}). Expected: {} ({}).".format(
+            i, 
+            tests[i][0], 
+            actual_bits,   # Prints bitstring
+            actual_val,    # Prints integer in parentheses for debugging
+            expected_bits, # Prints bitstring
+            expected_val   # Prints integer in parentheses
+        ))
+       # print("\033[1;31mTest {} failed: \033[0;37mInput: {}. Actual: {}. Expected: {}.".format(i, tests[i][0], func(*tests[i][0]), tests[i][1]))
 
 
 def test_method(name, generator, method, tests):
@@ -59,6 +74,16 @@ def make_posit_from_bit_pattern(es, bit_pattern):
     p.set_bit_pattern(bit_pattern)
     return p
 
+def make_posit_and_construct(N, es, sign, scale, fraction):
+    p = mul.Posit(N, es)
+    return p.construct(sign, scale, fraction)
+
+def get_bits(val, N):
+    temp = mul.Posit(N, 2)
+    temp.value = val
+    return temp.get_bits
+    
+
 
 
 test("removeTrailingZeroes", mul.removeTrailingZeros, [
@@ -73,22 +98,10 @@ test_method("Posit.extract", make_posit_from_bit_pattern, "extract", [
     ((4, "0000001010101100"), (0, -5, 5, 11)),
     ((4, "0111110100"), (0, 4, 8, 1)),
     ((8, "0111110"), (0, 4, 0, 1)),
-    ((8, "0000000"), None),
-    ((8, "1000000"), None)
+    ((8, "0000000"), (0, 0 , 0 , 0)),
+    ((8, "1000000"), (1, 0, 0, 0))
 ])
 
-
-
-ex_1 = make_posit_from_bit_pattern(2, "00000000")
-ex_2 = make_posit_from_bit_pattern(2, "00000000")
-ex_3 = make_posit_from_bit_pattern(2, "00000000")
-posit_builder_tests = [
-    ((0, 0, 0), ex_1),
-    ((1, -1, 2), ex_2),
-    ((0, 4, 1), ex_3),
-]
-
-builder = mul.Posit(8, 2)
 
 
 
@@ -102,7 +115,21 @@ test_method("Posit.get_value", make_posit_from_bit_pattern, "get_value", [
     ((2, "1000000"), (Decimal("inf")))
 ])
 
-test("construct", builder.construct, posit_builder_tests)
+
+
+
+# N, es , sign, scale, fraction  : es, bitpattern of result
+test("construct", make_posit_and_construct, [
+    ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000")),
+    ((8, 2, 1, 0, 0), make_posit_from_bit_pattern(2, "10000000")),
+    ((8, 2, 0, 11, 5), make_posit_from_bit_pattern(2, "01110111")),
+    ((8, 2, 0, 7, 3), make_posit_from_bit_pattern(2, "01101110")),
+    ((8, 2, 0, -4, 15), make_posit_from_bit_pattern(2, "00100111")),
+    ((8, 2, 0, 9, 12), make_posit_from_bit_pattern(2, "011100110")),
+    ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000")),
+    ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000")),
+    ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000"))
+])
 
 
 
