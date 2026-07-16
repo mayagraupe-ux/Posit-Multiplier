@@ -4,13 +4,14 @@ from decimal import getcontext, Decimal
 
 
 class Posit():
-    def __init__(self, N = None, es=None, value=0):
+    def __init__(self,  N = None, es=None, value =0 ):
         if( N != None and es != None):
             self.N = N
             self.es = es
+        
         else:
             self.N = 8
-            self.es = 0
+            self.es = 2
         
         self.value = 0
         self.numPat = 2**self.N  #num of bit patterns
@@ -143,7 +144,7 @@ class Posit():
 
     def __eq__(self, other):
         if type(other) != Posit:
-            other = Posit(other, N = self.N, es = self.es)
+            other = Posit(value = other, N = self.N, es = self.es)
         return self.value == other.value
 
 
@@ -208,7 +209,7 @@ class Posit():
         return self.get_value().__str__()
     
     def __repr__(self):
-        return self.str()
+        return self.__str__()
 
     def print_components(self):
         
