@@ -81,7 +81,7 @@ def make_posit_and_construct(N, es, sign, scale, fraction):
 def get_bits(val, N):
     temp = mul.Posit(N, 2)
     temp.value = val
-    return temp.get_bits
+    return temp.get_bits()
     
 
 

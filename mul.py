@@ -12,6 +12,11 @@ class Posit():
         else:
             self.N = 8
             self.es = 2
+
+        if isinstance(value, Posit):
+            self.value = value.value
+        else:
+            self.value = value
         
         self.value = 0
         self.numPat = 2**self.N  #num of bit patterns
@@ -119,7 +124,7 @@ class Posit():
                 regime_count += 1
             regime_count -= 1
         else:
-            while(checkBit(x, self.N - 2 - regime_count) == 0 and regime_count < self.N - 1):
+            while(regime_count < self.N - 1 and checkBit(x, self.N - 2 - regime_count) == 0 ):
                 regime_count += 1
             regime_count = -regime_count
         #still have to account for terminating bit
@@ -226,6 +231,22 @@ class Posit():
         no_implicit = bin_frac[1:]
         print(f"Fraction: {fraction} : {no_implicit}")
 
+
+    #sets the value of the posit to the given integer (as closely representable)
+    def set_value(self, x):
+        if type(x) == int :
+            if(x == 0):
+                self.value = 0
+            else:
+                sign =0 if x>=0 else 1
+                if sign == 1:
+                    x == abs(x)
+                scale = countBits(x) - 1
+                fraction = x 
+                self.value = self.construct(sign, scale, fraction).value
+        else:
+            raise "Not an integer boo"
+    
 
 
     def get_regime_string(self):
@@ -362,12 +383,16 @@ class Posit():
 
 #helper function to check if a bit is a 1 or 0
 def checkBit(value, bit):
+    if hasattr(value, 'value'):
+        value = value.value
     return (value >> bit) & 1
 
 #k = end position
 #n = num of bits
 # x = value
 def extractBits(x, n, k):
+   if hasattr(x, 'value'):
+        x = x.value
    return (x & createMask(n,k)) >> k
 
 def setBit(value, bit):
@@ -396,5 +421,7 @@ def countTrailingZeros(x):
  #n is the integer number to convert
  #bits is the bit width
 def twosComp(n, bits):
+    if hasattr(n, 'value'):
+        n = n.value
     n = ((1<< bits) -n) % (1 << bits)
     return n
