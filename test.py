@@ -79,8 +79,11 @@ def make_posit_and_construct(N, es, sign, scale, fraction):
     return p.construct(sign, scale, fraction)
 
 def get_bits(val, N):
-    temp = mul.Posit(N, 2)
-    temp.value = val
+    if(type(val) is int):
+        temp = mul.Posit(N, 2)
+        temp.set_value(val)
+    else:
+        temp = val
     return temp.get_bits()
     
 
@@ -125,7 +128,7 @@ test("construct", make_posit_and_construct, [
     ((8, 2, 0, 11, 5), make_posit_from_bit_pattern(2, "01110111")),
     ((8, 2, 0, 7, 3), make_posit_from_bit_pattern(2, "01101110")),
     ((8, 2, 0, -4, 15), make_posit_from_bit_pattern(2, "00100111")),
-    ((8, 2, 0, 9, 12), make_posit_from_bit_pattern(2, "011100110")),
+    ((8, 2, 0, 9, 12), make_posit_from_bit_pattern(2, "01110011")),
     ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000")),
     ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000")),
     ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000"))
