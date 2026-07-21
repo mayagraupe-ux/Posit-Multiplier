@@ -129,10 +129,13 @@ test("construct", make_posit_and_construct, [
     ((8, 2, 0, 7, 3), make_posit_from_bit_pattern(2, "01101110")),
     ((8, 2, 0, -4, 15), make_posit_from_bit_pattern(2, "00100111")),
     ((8, 2, 0, 9, 12), make_posit_from_bit_pattern(2, "01110011")),
-    ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000")),
-    ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000")),
-    ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000"))
+    ((8, 2, 0, 25, 17), make_posit_from_bit_pattern(2, "01111111")),
+    ((8, 2, 0, -30, 10), make_posit_from_bit_pattern(2, "00000001")),
+    ((8, 2, 1, -7, 12), make_posit_from_bit_pattern(2, "11101010")),
+    ((8, 2, 1, -11, 7), make_posit_from_bit_pattern(2, "11110100")),
+    ((8, 2, 1, 2, 9), make_posit_from_bit_pattern(2, "10101111"))
 ])
+
 
 
 

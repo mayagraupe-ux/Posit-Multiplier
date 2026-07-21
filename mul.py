@@ -23,7 +23,7 @@ class Posit():
         self.useed = 2**2**self.es #useed value
 
         self.maxpos = 2**(4*self.N - 8)
-        self.minpos = 1/self.maxpos
+        self.minpos = 1
 
         self.zero = 0
         self.inf = 2** (self.N - 1)
@@ -32,6 +32,7 @@ class Posit():
         ##implemente quire
 
     def set_bit_pattern(self, x):  
+        
         if(type(x) == str):
             if(x.count("1" ) + x.count("0") == len(x)):
                 if(len(x) <= self.N):
@@ -288,7 +289,7 @@ class Posit():
         regime = scale // (2 ** self.es)
         exponent = scale % (2 ** self.es)
         n = 0
-        print(f"n is {n:b}")
+        #print(f"n is {n:b}")
 
         #num of bits needed for regime - if pos, need +2 to account for terminating
         #if neg, need +1 to account for terminating and make it neg
@@ -298,11 +299,12 @@ class Posit():
             regime_length = -regime + 1
         
         #overflow to maxpos and underflow to minpos 
-        if(regime_length > self.N - 1):
+        if(regime_length >= self.N + 1):
                 p.set_bit_pattern(self.maxpos if regime> 0 else self.minpos)
                 if sign ==1:
                     p = -p # do i need a 2s comp here?
                 return p
+        
         
         #regime
         if regime >= 0:
@@ -310,7 +312,7 @@ class Posit():
         elif self.N -1 >= regime_length: #only need to place terminating bit if there is space for it
             n|= setBit(n, self.N -1 - regime_length)
           
-        print(f"n is {n:b}")
+        #print(f"n is {n:b}")
         
         
     
@@ -329,13 +331,13 @@ class Posit():
         #print(f" fraction length without implicit 1 : {fraction_length}")
         #remove hidden bit
         fraction &= int(2**(countBits(fraction)-1) - 1)
-        print(f"fraction without hidden bit {fraction:b}")
+        #print(f"fraction without hidden bit {fraction:b}")
 
         #check how many bits left open
         trailing_bits = self.N - 1 - regime_length
         #concatenate exp and frac
         exp_frac = removeTrailingZeros(exponent << (fraction_length) | fraction)
-        print(f"exp + frac = {exp_frac:b}")
+        #print(f"exp + frac = {exp_frac:b}")
     
 
         #min number of bits needed to represent exp and frac
@@ -352,39 +354,39 @@ class Posit():
         #round
 
         if trailing_bits < exp_frac_bits:
-            print("must round")
+            #print("must round")
             #get overflow bits
             overflown = exp_frac & createMask(exp_frac_bits - trailing_bits, 0)
             #print(f"overflow is {overflown:b}")
             #truncate trailing bits and encode to a number
-            print(f"n is {n:b}")
+            #print(f"n is {n:b}")
             n |= exp_frac >> (exp_frac_bits - trailing_bits)
-            print(f"n is {n:b}")
+            #print(f"n is {n:b}")
 
             #checking for a tie
             if(overflown == (1 << (exp_frac_bits - trailing_bits -1 ))): # creates a 1 followed by 0s of the length
                 #of the overflow to see if it is exactly half (10000)
                 #check last bit
-                print("exact half")
-                print("check bit is ", checkBit(exp_frac, exp_frac_bits - trailing_bits - 1))
+                #print("exact half")
+                #print("check bit is ", checkBit(exp_frac, exp_frac_bits - trailing_bits - 1))
                 if checkBit(exp_frac, exp_frac_bits - trailing_bits -1):
-                    print("last bit is 1")
-                    print(f"n is {n:b}")
+                    #print("last bit is 1")
+                   # print(f"n is {n:b}")
                     n += 1
                    # print("nnnn")
-                    print(f"n is {n:b}")
+                    #print(f"n is {n:b}")
             elif (overflown > ( 1 << (exp_frac_bits - trailing_bits))):
             #if greater, round up
-                print("greater")
+                #print("greater")
                 n+=1
             else:
-                print("less")
+                #print("less")
                 None
 
         else:
             n |= exp_frac << (trailing_bits - exp_frac_bits)
 
-        print(f"n is {n:b}")
+        #print(f"n is {n:b}")
         #if neg, 2s comp
         if sign == 0:
             p.set_bit_pattern(n)
