@@ -1,3 +1,4 @@
+
 import mul
 from decimal import getcontext, Decimal
 import math
@@ -79,6 +80,8 @@ def make_posit_and_construct(N, es, sign, scale, fraction):
     return p.construct(sign, scale, fraction)
 
 def get_bits(val, N):
+    if (val is None):
+        return 0
     if(type(val) is int):
         temp = mul.Posit(N, 2)
         temp.set_value(val)
@@ -86,6 +89,12 @@ def get_bits(val, N):
         temp = val
     return temp.get_bits()
     
+def make_posit_from_int(es, int, N):
+    p = mul.Posit(N= N, es= es, value= int)
+    return p
+    
+
+
 
 
 
@@ -123,8 +132,6 @@ test_method("Posit.get_value", make_posit_from_bit_pattern, "get_value", [
 
 # N, es , sign, scale, fraction  : es, bitpattern of result
 test("construct", make_posit_and_construct, [
-    ((8, 2, 0, 0, 0), make_posit_from_bit_pattern(2, "00000000")),
-    ((8, 2, 1, 0, 0), make_posit_from_bit_pattern(2, "10000000")),
     ((8, 2, 0, 11, 5), make_posit_from_bit_pattern(2, "01110111")),
     ((8, 2, 0, 7, 3), make_posit_from_bit_pattern(2, "01101110")),
     ((8, 2, 0, -4, 15), make_posit_from_bit_pattern(2, "00100111")),
@@ -134,6 +141,37 @@ test("construct", make_posit_and_construct, [
     ((8, 2, 1, -7, 12), make_posit_from_bit_pattern(2, "11101010")),
     ((8, 2, 1, -11, 7), make_posit_from_bit_pattern(2, "11110100")),
     ((8, 2, 1, 2, 9), make_posit_from_bit_pattern(2, "10101111"))
+])
+inf_posit = mul.Posit(N=8, es=2)
+inf_posit.set_bit_pattern('10000000')
+
+
+test("mult", mul.Posit.mult, [
+    # --- Zero Property ---
+        ((mul.Posit(value =0), mul.Posit(value=1)), mul.Posit(value=0)),
+        ((mul.Posit(value=0), mul.Posit(value=0)), mul.Posit(value=0)),
+        ((mul.Posit(value=-2.5), mul.Posit(value=0)), mul.Posit(value=0)),
+
+        # --- Identity Property ---
+        ((mul.Posit(value=1), mul.Posit(value=1)), mul.Posit(value=1)),
+        ((mul.Posit(value=1), mul.Posit(value=4.5)), mul.Posit(value=4.5)),
+        ((mul.Posit(value=-3), mul.Posit(value=1)), mul.Posit(value=-3)),
+
+        # --- Sign Handling ---
+        ((mul.Posit(value=2), mul.Posit(value=3)), mul.Posit(value=6)),
+        ((mul.Posit(value=-2), mul.Posit(value=3)), mul.Posit(value=-6)),
+        ((mul.Posit(value=2), mul.Posit(value=-3)), mul.Posit(value=-6)),
+        ((mul.Posit(value=-2), mul.Posit(value=-3)), mul.Posit(value=6)),
+
+        # --- Fractional Values ---
+        ((mul.Posit(value=0.5), mul.Posit(value=0.5)), mul.Posit(value=0.25)),
+        ((mul.Posit(value=0.25), mul.Posit(value=4)), mul.Posit(value=1)),
+        ((mul.Posit(value=1.5), mul.Posit(value=2.5)), mul.Posit(value=3.75)),
+
+        # --- Special Values (NaR - Not a Real) ---
+        ((inf_posit, mul.Posit(value=1)), inf_posit),
+        ((mul.Posit(value=0), inf_posit), inf_posit),
+        ((inf_posit, inf_posit), inf_posit),
 ])
 
 

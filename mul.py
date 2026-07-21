@@ -1,10 +1,11 @@
 import math
 from decimal import getcontext, Decimal
+from ctypes import c_ulonglong, c_double
 
 
 
 class Posit():
-    def __init__(self,  N = None, es=None, value =0 ):
+    def __init__(self,  N = None, es=None, value =0, bits =None ):
         if( N != None and es != None):
             self.N = N
             self.es = es
@@ -13,11 +14,9 @@ class Posit():
             self.N = 8
             self.es = 2
 
-        if isinstance(value, Posit):
-            self.value = value.value
-        else:
-            self.value = value
-        
+
+
+        #print(f"value is {value} and {self.get_bits()}")
         self.value = 0
         self.numPat = 2**self.N  #num of bit patterns
         self.useed = 2**2**self.es #useed value
@@ -27,6 +26,17 @@ class Posit():
 
         self.zero = 0
         self.inf = 2** (self.N - 1)
+
+
+        if bits is not None:
+            self.value = bits & (self.numPat -1)
+        elif type(value) == str:
+            self.set_string(value)
+        elif type(value ) == Posit:
+            self.value = value.value
+       
+        else:
+            self.set_float(float(value))
 
 
         ##implemente quire
@@ -49,20 +59,69 @@ class Posit():
         else:
             raise ValueError("Invalid input type: must be a string or integer")
         
+    def set_string(self, x):
+        #map a string to a poist
+        if type(x) == str:
+            if len(x) == 0:
+                raise "empty string"
+            dot_index =x.find('.')
+            sign = int(x[0] == '-')
+            if dot_index == -1:
+                self.set_int(int(x))
+            elif dot_index == len(x) -1:
+                self.set_int(int(x[:-1]))
+            else:
+                if sign ==1:
+                    x = x[1:]
+                    dot_index -=1
+                #count number of fraction dits
+                fdig = len(x) - 1 - dot_index
+                #get frac
+                frac = int(x[:dot_index] + x[dot_index+1:])
+                exp = countBits(frac) -1 -fdig
+                self.value = (self.construct(sign, exp, frac) /Posit(value = 5**fdig, N=self.N, es=self.es)).value
+        else:
+            raise "Not a string"
+
+   
+
+    def set_float(self, x):
+        #map a flaot to a posit
+        
+        if(type(x) == float):
+            #zero
+            if x==0:
+                self.value = 0
+            #inf or nan
+            elif math.isinf(x) or math.isnan(x):
+                self.value = self.inf
+            #normal float
+            else:
+                sign = 1 if x < 0 else 0
+                x_abs = abs(x)
+                n = self.float_to_int(x_abs) #64 bits
+                
+                #to get exp, remove sign, shift and then subtract bias
+                exponent = ((n >> 52) & 0x7FF) -1023
+                #to get frac, mask fraction bits and then OR the hidden bit
+                frac = (1 << 52) |(n & ((1 << 52) -1))
+
+                self.value = self.construct(sign, exponent, frac).value
 
 
-    def mul(self, other):
+        else:
+            raise "Not a float"
+
+    def mult(self, other):
         #make sure both are posits
         if type(other) != Posit:
             other = Posit(self.N, self.es, other)
         
         #check for 0 and inf
-        if(self.value == 0 or other.value == 0):
-            return Posit(self.N, self.es, 0)
         if(self.value == self.inf or other.value == other.inf):
-            return Posit(self.N, self.es, self.inf)
-        
-
+            return Posit(self.N, self.es, bits = self.inf)
+        if(self.value == 0 or other.value == 0):
+            return Posit(self.N, self.es, bits=0)
         
         
         #extract components
@@ -149,9 +208,16 @@ class Posit():
 
 
     def __eq__(self, other):
+        if(other is None or self is None):
+            return False
         if type(other) != Posit:
             other = Posit(value = other, N = self.N, es = self.es)
         return self.value == other.value
+    
+    def __neg__(self):
+        #negate a number
+        p = Posit(N = self.N, es = self.es)
+        p.set_bit_pattern(twosComp(self.value, self.N))
 
 
     def get_value(self):
@@ -217,6 +283,11 @@ class Posit():
     
     def __repr__(self):
         return self.__str__()
+    
+    def float_to_int(self, n):
+        #returns equivalent integer bit pattern of a float
+        if type(n) == float:
+            return c_ulonglong.from_buffer(c_double(n)).value
 
     def print_components(self):
         
@@ -242,12 +313,12 @@ class Posit():
             else:
                 sign =0 if x>=0 else 1
                 if sign == 1:
-                    x == abs(x)
+                    x = abs(x)
                 scale = countBits(x) - 1
                 fraction = x 
                 self.value = self.construct(sign, scale, fraction).value
         else:
-            raise "Not an integer boo"
+            raise TypeError("Not an integer boo")
     
 
 
@@ -277,12 +348,13 @@ class Posit():
 
         p = Posit(N = self.N, es = self.es)
         #check for exceptions
-        if(scale == 0 & fraction ==0):
-            if sign ==0 :
-                p.set_bit_pattern("00000000")
-            else:
-                p.set_bit_pattern("10000000")
-            return p
+      
+       # if(scale == 0 & fraction ==0):
+        #    if sign ==0 :
+        #        p.set_bit_pattern("00000000")
+        #    else:
+        #        p.set_bit_pattern("10000000")
+         #   return p
         
         # scale = (regime * (2**es ) ) + exponent
         #need to floor divide scale by 2^es to get regime, and mod by 2^es to get exponent
@@ -327,7 +399,7 @@ class Posit():
         fraction = removeTrailingZeros(fraction)
         #print(f"fraction 1: {fraction:b}")
         #subtract 1 from fraction to account for implicit leading 1
-        fraction_length = countBits(fraction) -1
+        fraction_length = max(0, countBits(fraction) -1)
         #print(f" fraction length without implicit 1 : {fraction_length}")
         #remove hidden bit
         fraction &= int(2**(countBits(fraction)-1) - 1)
@@ -416,7 +488,7 @@ class Posit():
 def checkBit(value, bit):
     if hasattr(value, 'value'):
         value = value.value
-    return (value >> bit) & 1
+    return (int(value) >> bit) & 1
 
 #k = end position
 #n = num of bits
