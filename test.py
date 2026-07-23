@@ -35,7 +35,7 @@ def test(name, func, tests):
             expected_bits, # Prints bitstring
             expected_val   # Prints integer in parentheses
         ))
-       # print("\033[1;31mTest {} failed: \033[0;37mInput: {}. Actual: {}. Expected: {}.".format(i, tests[i][0], func(*tests[i][0]), tests[i][1]))
+       
 
 
 def test_method(name, generator, method, tests):

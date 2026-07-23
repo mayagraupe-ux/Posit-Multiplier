@@ -16,7 +16,7 @@ class Posit():
 
 
 
-        #print(f"value is {value} and {self.get_bits()}")
+       
         self.value = 0
         self.numPat = 2**self.N  #num of bit patterns
         self.useed = 2**2**self.es #useed value
@@ -39,7 +39,7 @@ class Posit():
             self.set_float(float(value))
 
 
-        ##implemente quire
+        ##implemente quire hypothetically
 
     def set_bit_pattern(self, x):  
         
@@ -235,7 +235,7 @@ class Posit():
         n = countBits(fraction) - 1
         f = Decimal(fraction)
         
-        #return ((1 - (3 * sign)) + f ) * (Decimal(2) **Decimal((1 - (2 * sign)) * (2**(self.es) * regime + exponent + sign)) )
+       
         return ((-1)**sign * Decimal(2)**Decimal(2**self.es * regime + exponent -n) * Decimal(f))
     
     def print_value(self):
@@ -253,7 +253,7 @@ class Posit():
         n = countBits(fraction) - 1
         f = Decimal(fraction)
         
-        #return ((1 - (3 * sign)) + f ) * (Decimal(2) **Decimal((1 - (2 * sign)) * (2**(self.es) * regime + exponent + sign)) )
+       
         print ((-1)**sign * Decimal(2)**Decimal(2**self.es * regime + exponent -n) * Decimal(f))
 
     def print_bits(self):
@@ -264,7 +264,7 @@ class Posit():
         else:
         #print integer value padded with 0s
             print(f"{self.value:0{self.N}b}")
-        #im so stupid bruh
+      
     
     def get_bits(self):
          
@@ -349,19 +349,13 @@ class Posit():
         p = Posit(N = self.N, es = self.es)
         #check for exceptions
       
-       # if(scale == 0 & fraction ==0):
-        #    if sign ==0 :
-        #        p.set_bit_pattern("00000000")
-        #    else:
-        #        p.set_bit_pattern("10000000")
-         #   return p
         
         # scale = (regime * (2**es ) ) + exponent
         #need to floor divide scale by 2^es to get regime, and mod by 2^es to get exponent
         regime = scale // (2 ** self.es)
         exponent = scale % (2 ** self.es)
         n = 0
-        #print(f"n is {n:b}")
+        
 
         #num of bits needed for regime - if pos, need +2 to account for terminating
         #if neg, need +1 to account for terminating and make it neg
@@ -374,7 +368,7 @@ class Posit():
         if(regime_length >= self.N + 1):
                 p.set_bit_pattern(self.maxpos if regime> 0 else self.minpos)
                 if sign ==1:
-                    p = -p # do i need a 2s comp here?
+                    p = -p 
                 return p
         
         
@@ -384,32 +378,23 @@ class Posit():
         elif self.N -1 >= regime_length: #only need to place terminating bit if there is space for it
             n|= setBit(n, self.N -1 - regime_length)
           
-        #print(f"n is {n:b}")
-        
-        
-    
 
         #count how many bits are left for exponent and fraction
         exp_bits = min(self.es, self.N- 1 - regime_length)
-        #print(f"num bits left for exp: {exp_bits}")
-        fraction_bits = self.N - 1 - regime_length - exp_bits
-        #print(f"num bits left for frac: {fraction_bits}")
+        
+        
 
         #remove trailing zeros
         fraction = removeTrailingZeros(fraction)
-        #print(f"fraction 1: {fraction:b}")
         #subtract 1 from fraction to account for implicit leading 1
         fraction_length = max(0, countBits(fraction) -1)
-        #print(f" fraction length without implicit 1 : {fraction_length}")
         #remove hidden bit
         fraction &= int(2**(countBits(fraction)-1) - 1)
-        #print(f"fraction without hidden bit {fraction:b}")
-
+        
         #check how many bits left open
         trailing_bits = self.N - 1 - regime_length
         #concatenate exp and frac
         exp_frac = removeTrailingZeros(exponent << (fraction_length) | fraction)
-        #print(f"exp + frac = {exp_frac:b}")
     
 
         #min number of bits needed to represent exp and frac
@@ -419,46 +404,31 @@ class Posit():
             exp_frac_bits = self.es + fraction_length
         
 
-        #print(f"n is now : {n:b}")
-        #print(f"trailing bits: {trailing_bits}")
-        #print(f" exp and fraction bits: {exp_frac_bits}")
-        
         #round
 
         if trailing_bits < exp_frac_bits:
-            #print("must round")
+           
             #get overflow bits
             overflown = exp_frac & createMask(exp_frac_bits - trailing_bits, 0)
-            #print(f"overflow is {overflown:b}")
             #truncate trailing bits and encode to a number
-            #print(f"n is {n:b}")
             n |= exp_frac >> (exp_frac_bits - trailing_bits)
-            #print(f"n is {n:b}")
 
             #checking for a tie
             if(overflown == (1 << (exp_frac_bits - trailing_bits -1 ))): # creates a 1 followed by 0s of the length
                 #of the overflow to see if it is exactly half (10000)
                 #check last bit
-                #print("exact half")
-                #print("check bit is ", checkBit(exp_frac, exp_frac_bits - trailing_bits - 1))
+               
                 if checkBit(exp_frac, exp_frac_bits - trailing_bits -1):
-                    #print("last bit is 1")
-                   # print(f"n is {n:b}")
                     n += 1
-                   # print("nnnn")
-                    #print(f"n is {n:b}")
             elif (overflown > ( 1 << (exp_frac_bits - trailing_bits))):
             #if greater, round up
-                #print("greater")
                 n+=1
             else:
-                #print("less")
                 None
 
         else:
             n |= exp_frac << (trailing_bits - exp_frac_bits)
 
-        #print(f"n is {n:b}")
         #if neg, 2s comp
         if sign == 0:
             p.set_bit_pattern(n)
